@@ -27,12 +27,18 @@ fn main() {
         [0, 0, 6, 0, 0, 5, 0, 1, 0],
         [0, 0, 3, 8, 9, 1, 5, 0, 0]
     ]);
-    match sudoku {
-        Ok(mut sudoku) =>{
-            sudoku.solve().unwrap();
-            println!("Is sudoku correct: {}", sudoku.check_if_correct());
-            println!("{}", sudoku);
-        }
-        Err(e) => println!("Error: {}", e)
+    if let Err(e) = sudoku {
+        println!("Error: {}", e);
+        return;
     }
+    let mut sudoku = sudoku.unwrap();
+
+    let is_solve_successful = sudoku.solve();
+    if let Err(e) = is_solve_successful {
+        println!("Error: {}", e);
+        return;
+    }
+
+    println!("Is sudoku correct: {}", sudoku.check_if_correct());
+    println!("{}", sudoku);
 }
