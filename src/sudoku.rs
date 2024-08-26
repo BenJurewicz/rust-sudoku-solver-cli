@@ -12,10 +12,19 @@ pub struct SudokuSolver {
     debug_view: String
 }
 
+#[derive(Debug, Clone)]
 pub struct ErrorSudokuContainsAContradiction;
 impl std::fmt::Display for ErrorSudokuContainsAContradiction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "The sudoku cannot be solved because it contains a contradiction in the initial state")
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SudokuIsUnsolvable;
+impl std::fmt::Display for SudokuIsUnsolvable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "The sudoku contains a contradiction that could not be detected when initializing the SudokuSolver")
     }
 }
 
@@ -47,8 +56,9 @@ impl SudokuSolver {
         &mut self.board[cell_coords.y][cell_coords.x]
     }
 
-    pub fn solve(&mut self) -> bool {
+    pub fn solve(&mut self) -> Result<(), SudokuIsUnsolvable>{
         let mut solved = false;
+
         while !solved {
             match self.solve_iteration() {
                 Ok(true) => solved = true,
@@ -60,7 +70,12 @@ impl SudokuSolver {
             }
             self.debug_view = self.to_string();
         }
-        solved
+
+        if solved {
+            Ok(())
+        } else {
+            Err(SudokuIsUnsolvable)
+        }
     }
 
     // returns true if sudoku is solved, false if not and Err if there is a contradiction
