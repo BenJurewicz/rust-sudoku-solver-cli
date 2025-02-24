@@ -1,5 +1,6 @@
 use crate::cell::Cell;
 use crate::point::Point;
+pub use crate::sudoku_errors::*;
 
 use std::collections::HashSet;
 
@@ -10,22 +11,6 @@ pub struct SudokuSolver {
     board: Sudoku,
     previous_states: Vec<Sudoku>,
     debug_view: String
-}
-
-#[derive(Debug, Clone)]
-pub struct ErrorSudokuContainsAContradiction;
-impl std::fmt::Display for ErrorSudokuContainsAContradiction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "The sudoku cannot be solved because it contains a contradiction in the initial state")
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct SudokuIsUnsolvable;
-impl std::fmt::Display for SudokuIsUnsolvable {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "The sudoku contains a contradiction that could not be detected when initializing the SudokuSolver")
-    }
 }
 
 // sudokuBuilder would be nice
@@ -41,7 +26,7 @@ impl SudokuSolver {
             for (x, cell) in row.iter().enumerate() {
                 if *cell == 0  { continue; }
                 sudoku.board[y][x] = Cell::new_filled(*cell);
-                sudoku.propagate_collapse(Point::new(x, y), *cell).map_err(|_| ErrorSudokuContainsAContradiction)?;
+                sudoku.propagate_collapse(Point::new(x, y), *cell).map_err(|_| Error::contains_a_contradiction())?;
             }
         }
 
@@ -56,7 +41,7 @@ impl SudokuSolver {
         &mut self.board[cell_coords.y][cell_coords.x]
     }
 
-    pub fn solve(&mut self) -> Result<(), SudokuIsUnsolvable>{
+    pub fn solve(&mut self) -> Result<(), Error>{
         let mut solved = false;
 
         while !solved {
@@ -74,7 +59,7 @@ impl SudokuSolver {
         if solved {
             Ok(())
         } else {
-            Err(SudokuIsUnsolvable)
+            Err(Error::is_unsolvable())
         }
     }
 
