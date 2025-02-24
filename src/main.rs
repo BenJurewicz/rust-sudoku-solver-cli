@@ -1,9 +1,9 @@
-mod sudoku;
+mod sudoku_solver;
 mod cell;
 mod point;
 mod sudoku_errors;
 
-use crate::sudoku::SudokuSolver;
+use crate::sudoku_solver::SudokuSolver;
 
 fn main() {
     // let mut sudoku = SudokuSolver::new([

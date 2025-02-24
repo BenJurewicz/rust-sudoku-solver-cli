@@ -15,12 +15,16 @@ pub struct SudokuSolver {
 
 // sudokuBuilder would be nice
 impl SudokuSolver {
-    pub fn new(starting_state: [[u8; 9]; 9]) -> Result<Self, ErrorSudokuContainsAContradiction> {
-        let mut sudoku = SudokuSolver {
+    pub fn new_empty() -> Self {
+        SudokuSolver {
             board: vec![vec![Cell::new_empty(); 9]; 9],
             previous_states: Vec::with_capacity(81), // sudoku is 9x9 so there is 81 max moves on a totally empty board
             debug_view: String::new()
-        };
+        }
+    }
+
+    pub fn new(starting_state: [[u8; 9]; 9]) -> Result<Self, Error> {
+        let mut sudoku = SudokuSolver::new_empty();
 
         for (y, row) in starting_state.iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {
