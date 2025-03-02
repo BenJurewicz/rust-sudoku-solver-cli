@@ -52,7 +52,9 @@ impl Cell {
         }
     }
 
-    /// returns the value that the cell was collapsed to
+    /// If the cell has more than one possible value, the function returns
+    /// a copy of the uncollapsed cell with that value removed. <br>
+    /// Otherwise, it returns the state of the cell before collapsing.
     pub fn collapse(&mut self) -> Cell{
         let mut cell = self.clone();
         *self = match self {

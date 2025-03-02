@@ -2,46 +2,28 @@ mod sudoku_solver;
 mod cell;
 mod point;
 mod sudoku_errors;
+mod sudoku;
 
-use crate::sudoku_solver::SudokuSolver;
+use crate::sudoku::Sudoku;
 
 fn main() {
-    // let mut sudoku = SudokuSolver::new([
-    //                           [1, 0, 0, 0, 0, 0, 0, 0, 0],
-    //                           [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //                           [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //                           [0, 9, 0, 0, 0, 0, 0, 0, 0],
-    //                           [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //                           [0, 8, 0, 0, 0, 0, 0, 0, 0],
-    //                           [0, 7, 0, 0, 0, 0, 0, 0, 0],
-    //                           [0, 6, 0, 0, 0, 0, 0, 0, 0],
-    //                           [0, 5, 0, 0, 0, 0, 0, 0, 0]
-    // ]);
+    let mut sudoku = Sudoku::new_puzzle(60);
+    sudoku.solve().unwrap();
 
-    let sudoku = SudokuSolver::new([
-        [0, 0, 0, 0, 0, 0, 0, 8, 0],
-        [6, 8, 0, 4, 7, 0, 0, 2, 0],
-        [0, 1, 9, 5, 0, 8, 6, 4, 7],
-        [0, 6, 0, 9, 0, 0, 0, 0, 4],
-        [3, 4, 2, 6, 8, 0, 0, 0, 0],
-        [1, 9, 0, 0, 5, 0, 8, 3, 0],
-        [0, 0, 0, 7, 2, 0, 4, 0, 3],
-        [0, 0, 6, 0, 0, 5, 0, 1, 0],
-        [0, 0, 3, 8, 9, 1, 5, 0, 0]
-    ]);
-
-    if let Err(e) = sudoku {
-        println!("Error: {}", e);
-        return;
-    }
-    let mut sudoku = sudoku.unwrap();
-
-    let is_solve_successful = sudoku.solve();
-    if let Err(e) = is_solve_successful {
-        println!("Error: {}", e);
-        return;
-    }
-
-    println!("Is sudoku correct: {}", sudoku.check_if_correct());
     println!("{}", sudoku);
+    println!("Is sudoku correct: {}", sudoku.check());
 }
+
+// fn main() {
+//     let mut sudoku = Sudoku::new_puzzle(60);
+//     sudoku.set_cell(Point::new(0, 0), NonZeroU8::new(1).unwrap());
+//     sudoku.set_cell(Point::new(1, 0), NonZeroU8::new(1).unwrap());
+//
+//     if let Err(e) = sudoku.solve() {
+//         eprintln!("Error: {}", e);
+//         return;
+//     }
+//
+//     println!("{}", sudoku);
+//     println!("Is sudoku correct: {}", sudoku.check());
+// }

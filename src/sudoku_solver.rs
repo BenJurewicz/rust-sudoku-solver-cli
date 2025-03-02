@@ -1,51 +1,58 @@
+use std::array::from_fn;
+use std::collections::HashSet;
+use std::num::NonZeroU8;
+
 use crate::cell::Cell;
 use crate::point::Point;
 pub use crate::sudoku_errors::*;
 
-use std::collections::HashSet;
-
-type Sudoku = Vec<Vec<Cell>>;
+// type Sudoku = Vec<Vec<Cell>>;
+type Sudoku = [[Cell; 9]; 9];
 
 #[derive(Debug, Clone)]
 pub struct SudokuSolver {
     board: Sudoku,
     previous_states: Vec<Sudoku>,
-    debug_view: String
 }
 
-// sudokuBuilder would be nice
 impl SudokuSolver {
     pub fn new_empty() -> Self {
         SudokuSolver {
-            board: vec![vec![Cell::new_empty(); 9]; 9],
+            board: from_fn(|_| from_fn(|_| Cell::new_empty())),
             previous_states: Vec::with_capacity(81), // sudoku is 9x9 so there is 81 max moves on a totally empty board
-            debug_view: String::new()
         }
     }
 
-    pub fn new(starting_state: [[u8; 9]; 9]) -> Result<Self, Error> {
+    pub fn new(starting_state: [[Option<NonZeroU8>; 9]; 9]) -> Result<Self, ErrorNoSolution> {
         let mut sudoku = SudokuSolver::new_empty();
 
         for (y, row) in starting_state.iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {
-                if *cell == 0  { continue; }
-                sudoku.board[y][x] = Cell::new_filled(*cell);
-                sudoku.propagate_collapse(Point::new(x, y), *cell).map_err(|_| Error::contains_a_contradiction())?;
+                if let Some(cell) = cell {
+                    sudoku.board[y][x] = Cell::new_filled(u8::from(*cell));
+                    sudoku.propagate_collapse(Point::new(x, y), u8::from(*cell)).map_err(|_| ErrorNoSolution)?;
+                }
             }
         }
 
         Ok(sudoku)
     }
 
-    fn get_cell(&self, cell_coords: &Point<usize>) -> &Cell {
-        &self.board[cell_coords.y][cell_coords.x]
-    }
-
     fn get_cell_mut(&mut self, cell_coords: &Point<usize>) -> &mut Cell {
         &mut self.board[cell_coords.y][cell_coords.x]
     }
 
-    pub fn solve(&mut self) -> Result<(), Error>{
+    fn board_to_option_array(self) -> [[Option<NonZeroU8>; 9]; 9] {
+        self.board.map(|row| row.map(
+            |cell| {
+                match cell {
+                    Cell::Collapsed(n) => Some(NonZeroU8::try_from(n).unwrap()),
+                    Cell::Uncollapsed(_) => None
+                }
+            }))
+    }
+
+    pub fn solve(mut self) -> Result<[[Option<NonZeroU8>; 9]; 9], ErrorNoSolution>{
         let mut solved = false;
 
         while !solved {
@@ -57,13 +64,12 @@ impl SudokuSolver {
                     None => break
                 }
             }
-            self.debug_view = self.to_string();
         }
 
         if solved {
-            Ok(())
+            Ok(self.board_to_option_array())
         } else {
-            Err(Error::is_unsolvable())
+            Err(ErrorNoSolution)
         }
     }
 
@@ -100,7 +106,7 @@ impl SudokuSolver {
     }
 
     fn get_relatives(&self, cell_coords: Point<usize>) -> Vec<Point<usize>> {
-        // let mut relatives = HashSet::with_capacity(20); // row + column + small square - repetitions = 3*8-4 = 20
+       // row + column + small square - repetitions = 3*8-4 = 20
         let mut relatives = HashSet::with_capacity(20);
         relatives.extend(self.get_row(cell_coords.y));
         relatives.extend(self.get_column(cell_coords.x));
@@ -114,7 +120,7 @@ impl SudokuSolver {
         Point::new(cell_coords.x / 3, cell_coords.y / 3) * 3
     }
 
-    fn get_coords_of_uncollapsed_cell_with_lowest_entropy(& self) -> Option<Point<usize>> {
+    fn get_coords_of_uncollapsed_cell_with_lowest_entropy(&self) -> Option<Point<usize>> {
         let mut cell = None::<Point<usize>>;
         let mut lowest_entropy = u8::MAX;
 
@@ -132,43 +138,6 @@ impl SudokuSolver {
         }
 
         cell
-    }
-
-    pub fn check_if_correct(&self) -> bool {
-        self.check_rows() && self.check_columns() && self.check_regions()
-    }
-
-    fn check_rows(&self) -> bool {
-        for y in 0..9 {
-            let row : HashSet<_> = HashSet::from_iter(self.get_row(y));
-            if !self.check_if_points_have_all_digits(&row) {
-                return false;
-            }
-        }
-        true
-    }
-
-    fn check_columns(&self) -> bool {
-        for x in 0..9 {
-            let column: HashSet<_> = HashSet::from_iter(self.get_column(x));
-            if !self.check_if_points_have_all_digits(&column) {
-                return false;
-            }
-        }
-        true
-    }
-
-    // region is the small 3x3 square (according to some site with sudoku terminology)
-    fn check_regions(&self) -> bool {
-        for y in [0, 3, 6]{
-            for x in [0, 3, 6]{
-                let region = self.get_region(Point::new(x, y));
-                if !self.check_if_points_have_all_digits(&region) {
-                    return false;
-                }
-            }
-        }
-        true
     }
 
     fn get_region(&self, point: Point<usize>) -> HashSet<Point<usize>> {
@@ -196,64 +165,5 @@ impl SudokuSolver {
             relatives.insert(Point::new(x, y));
         }
         relatives
-    }
-
-    fn check_if_points_have_all_digits(&self, hash: &HashSet<Point<usize>>) -> bool {
-        self.check_if_hash_has_all_digits(self.points_to_digits(hash))
-    }
-
-
-    fn points_to_digits(&self, points: &HashSet<Point<usize>>) -> HashSet<u8> {
-        let mut digits = HashSet::with_capacity(points.len());
-        for point in points {
-            if let Cell::Collapsed(value) = self.get_cell(point) {
-                digits.insert(*value);
-            } else {
-                digits.insert(0);
-            }
-        }
-
-        digits
-    }
-
-    fn check_if_hash_has_all_digits(&self, hash: HashSet<u8>) -> bool {
-        let mut digits: HashSet<u8> = HashSet::from([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-        for digit in hash.iter() {
-            if !digits.remove(digit) {
-                return false;
-            }
-        }
-        digits.is_empty()
-    }
-
-}
-
-impl std::fmt::Display for SudokuSolver {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (y, row) in self.board.iter().enumerate() {
-            for (x, cell) in row.iter().enumerate() {
-                match cell {
-                    Cell::Collapsed(value) => write!(f, "{}", value)?,
-                    Cell::Uncollapsed(_) => write!(f, " ")?
-                }
-                write!(f, " ")?;
-                if x % 3 == 2 && x != row.len() - 1 {
-                    write!(f, "| ")?;
-                }
-            }
-
-            write!(f, "\n")?;
-            if y % 3 == 2 && y != self.board.len() - 1 {
-                for x in 0..(2*row.len() + 3) {
-                    if x == 6 || x == 14 {
-                        write!(f, "+")?;
-                    } else {
-                        write!(f, "-")?;
-                    }
-                }
-                write!(f, "\n")?;
-            }
-        }
-        Ok(())
     }
 }
