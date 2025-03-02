@@ -71,11 +71,23 @@ impl Sudoku {
     }
 
     pub fn set_cell(&mut self, point: Point<usize>, value: NonZeroU8) {
-        self.board[point.y][point.x] = Some(value);
+        if !self.read_only[point.y][point.x] {
+            self.board[point.y][point.x] = Some(value);
+        }
     }
 
     pub fn is_read_only(&self, point: Point<usize>) -> bool {
         self.read_only[point.y][point.x]
+    }
+
+    pub fn clear(&mut self) {
+        for y in 0..9 {
+            for x in 0..9 {
+                if !self.read_only[y][x] {
+                    self.board[y][x] = None;
+                }
+            }
+        }
     }
 
     pub fn solve(&mut self) -> Result<(), ErrorNoSolution> {
